@@ -39,8 +39,8 @@
 
   <!-- 🚨 IMPORTANTE: el script debe ir al final para que los elementos estén cargados -->
   <script>
-    const subscribeTopic = "topicsub";
-    const publishTopic = "topicpub";
+    const subscribeTopic = "topicpub";
+    const publishTopic = "topicsub";
 
     const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
       clientId: "web_" + Math.random().toString(16).substr(2, 8)
