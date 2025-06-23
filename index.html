@@ -1,118 +1,90 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Controlador nRF9151</title>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <style>
-    canvas { border-radius: 50%; cursor: crosshair; }
-    #colorPreview {
-      display: inline-block;
-      width: 40px;
-      height: 40px;
-      border: 1px solid black;
-      margin-left: 10px;
-      vertical-align: middle;
-    }
-  </style>
-</head>
-<body>
-  <h2>Estado MQTT: <span id="status">Conectando...</span></h2>
+<script>
+  const subscribeTopic = "topicsub";
+  const publishTopic = "topicpub";
 
-  <button id="btnRojo">Rojo</button>
-  <button id="btnVerde">Verde</button>
-  <button id="btnAzul">Azul</button>
+  const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
+    clientId: "web_" + Math.random().toString(16).substr(2, 8)
+  });
 
-  <h3>Selecciona color</h3>
-  <canvas id="colorCanvas" width="300" height="300"></canvas><br>
+  const statusEl = document.getElementById("status");
+  const outputEl = document.getElementById("output");
+  const colorValue = document.getElementById("colorValue");
+  const colorPreview = document.getElementById("colorPreview");
+  const brightnessSlider = document.getElementById("brightness");
+  const brightnessVal = document.getElementById("brightnessVal");
 
-  <label for="brightness">Brillo:</label>
-  <input type="range" id="brightness" min="0" max="200" value="100" />
-  <span id="brightnessVal">100%</span>
+  brightnessSlider.addEventListener("input", () => {
+    brightnessVal.textContent = brightnessSlider.value + "%";
+  });
 
-  <div>
-    <span id="colorValue">---</span>
-    <span id="colorPreview"></span>
-  </div>
+  client.on("connect", () => {
+    statusEl.textContent = "Conectado";
+    client.subscribe(subscribeTopic);
+  });
 
-  <pre id="output"></pre>
+  client.on("message", (topic, message) => {
+    const timestamp = new Date().toLocaleTimeString();
+    outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${message.toString()}`;
+  });
 
-  <script>
-    const subscribeTopic = "topicsub";
-    const publishTopic = "topicpub";
+  client.on("error", (err) => {
+    statusEl.textContent = "Error de conexión";
+    console.error("MQTT Error:", err);
+  });
 
-    const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
-      clientId: "web_" + Math.random().toString(16).substr(2, 8)
-    });
-
-    const statusEl = document.getElementById("status");
-    const outputEl = document.getElementById("output");
-    const colorValue = document.getElementById("colorValue");
-    const colorPreview = document.getElementById("colorPreview");
-    const brightnessSlider = document.getElementById("brightness");
-    const brightnessVal = document.getElementById("brightnessVal");
-
-    brightnessSlider.addEventListener("input", () => {
-      brightnessVal.textContent = brightnessSlider.value + "%";
-    });
-
-    client.on("connect", () => {
-      statusEl.textContent = "Conectado";
-      client.subscribe(subscribeTopic);
-    });
-
-    client.on("message", (topic, message) => {
-      const timestamp = new Date().toLocaleTimeString();
-      outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${message.toString()}`;
-    });
-
-    client.on("error", (err) => {
-      statusEl.textContent = "Error de conexión";
-      console.error("MQTT Error:", err);
-    });
-
-    const publishColor = (color) => {
-      const payload = { led1: color };
-      client.publish(publishTopic, JSON.stringify(payload));
+  const publishFixedColor = (color) => {
+    const map = {
+      "rojo": {led2r: 255, led2g: 0, led2b: 0},
+      "verde": {led2r: 0, led2g: 255, led2b: 0},
+      "azul": {led2r: 0, led2g: 0, led2b: 255}
     };
+    client.publish(publishTopic, JSON.stringify(map[color]));
+  };
 
-    document.getElementById("btnRojo").addEventListener("click", () => publishColor("rojo"));
-    document.getElementById("btnVerde").addEventListener("click", () => publishColor("verde"));
-    document.getElementById("btnAzul").addEventListener("click", () => publishColor("azul"));
-
-    const canvas = document.getElementById("colorCanvas");
-    const ctx = canvas.getContext("2d");
-    const image = new Image();
-    image.src = "colorwheel-rgb.jpg"; // debe estar en la misma carpeta
-
-    image.onload = () => {
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const publishColor = (r, g, b) => {
+    const payload = {
+      led2r: r,
+      led2g: g,
+      led2b: b
     };
+    client.publish(publishTopic, JSON.stringify(payload));
+  };
 
-    canvas.addEventListener("click", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor(e.clientX - rect.left);
-      const y = Math.floor(e.clientY - rect.top);
-      const pixel = ctx.getImageData(x, y, 1, 1).data;
+  document.getElementById("btnRojo").addEventListener("click", () => publishFixedColor("rojo"));
+  document.getElementById("btnVerde").addEventListener("click", () => publishFixedColor("verde"));
+  document.getElementById("btnAzul").addEventListener("click", () => publishFixedColor("azul"));
 
-      let r = pixel[0], g = pixel[1], b = pixel[2];
-      const factor = brightnessSlider.value / 100;
+  const canvas = document.getElementById("colorCanvas");
+  const ctx = canvas.getContext("2d");
+  const image = new Image();
+  image.src = "colorwheel-rgb.jpg"; // Asegúrate de tenerlo en la misma carpeta
 
-      // Aplica el factor de brillo
-      r = Math.min(255, Math.round(r * factor));
-      g = Math.min(255, Math.round(g * factor));
-      b = Math.min(255, Math.round(b * factor));
+  image.onload = () => {
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  };
 
-      const hex = rgbToHex(r, g, b);
-      colorValue.textContent = `${hex} (R:${r}, G:${g}, B:${b})`;
-      colorPreview.style.backgroundColor = hex;
+  canvas.addEventListener("click", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor(e.clientX - rect.left);
+    const y = Math.floor(e.clientY - rect.top);
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
 
-      publishColor(hex);
-    });
+    let r = pixel[0], g = pixel[1], b = pixel[2];
+    const factor = brightnessSlider.value / 100;
 
-    function rgbToHex(r, g, b) {
-      return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
-    }
-  </script>
-</body>
-</html>
+    // Aplica el factor de brillo
+    r = Math.min(255, Math.round(r * factor));
+    g = Math.min(255, Math.round(g * factor));
+    b = Math.min(255, Math.round(b * factor));
+
+    const hex = rgbToHex(r, g, b);
+    colorValue.textContent = `${hex} (R:${r}, G:${g}, B:${b})`;
+    colorPreview.style.backgroundColor = hex;
+
+    publishColor(r, g, b);
+  });
+
+  function rgbToHex(r, g, b) {
+    return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+  }
+</script>
