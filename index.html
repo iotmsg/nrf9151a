@@ -37,7 +37,7 @@
 
   <pre id="output"></pre>
 
-  <!-- 🚨 IMPORTANTE: el script debe ir al final para que los elementos estén cargados -->
+  <!-- IMPORTANTE: el script debe ir al final para que los elementos estén cargados -->
   <script>
     const subscribeTopic = "topicpub";
     const publishTopic = "topicsub";
@@ -78,6 +78,7 @@
         "verde": { led2r: 0, led2g: 255, led2b: 0 },
         "azul": { led2r: 0, led2g: 0, led2b: 255 }
       };
+      console.log("Enviando MQTT (fijo):", JSON.stringify(map[color]));
       client.publish(publishTopic, JSON.stringify(map[color]));
     };
 
@@ -87,6 +88,7 @@
         led2g: g,
         led2b: b
       };
+      console.log("Enviando MQTT:", JSON.stringify(payload));
       client.publish(publishTopic, JSON.stringify(payload));
     };
 
@@ -97,7 +99,7 @@
     const canvas = document.getElementById("colorCanvas");
     const ctx = canvas.getContext("2d");
     const image = new Image();
-    image.src = "colorwheel-rgb.jpg"; // Asegúrate de tener esta imagen en el mismo directorio
+    image.src = "colorwheel-rgb.jpg";
 
     image.onload = () => {
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
