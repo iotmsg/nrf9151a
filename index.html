@@ -1,47 +1,100 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Selector de color RGB</title>
+  <meta charset="UTF-8" />
+  <title>Cliente MQTT Web</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; }
-    #canvas { cursor: crosshair; }
+    canvas { border-radius: 50%; cursor: crosshair; }
     #colorPreview {
-      margin-top: 10px;
-      width: 50px;
-      height: 50px;
-      border: 2px solid #000;
       display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 1px solid black;
+      margin-left: 10px;
+      vertical-align: middle;
     }
   </style>
 </head>
 <body>
-  <h2>Selecciona un color de la rueda</h2>
-  <canvas id="canvas" width="400" height="400"></canvas>
-  <div>
-    <p>Color RGB: <span id="rgbValue">---</span></p>
-    <div id="colorPreview"></div>
-  </div>
+  <h2>Estado MQTT: <span id="status">Conectando...</span></h2>
+
+  <button id="btnRojo">Rojo</button>
+  <button id="btnVerde">Verde</button>
+  <button id="btnAzul">Azul</button>
+
+  <h3>Selecciona color desde el círculo</h3>
+  <canvas id="colorCanvas" width="300" height="300"></canvas>
+  <span id="colorValue">---</span>
+  <span id="colorPreview"></span>
+
+  <pre id="output"></pre>
 
   <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const rgbValue = document.getElementById("rgbValue");
+    const subscribeTopic = "topicsub";
+    const publishTopic = "topicpub";
+
+    const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
+      clientId: "web_" + Math.random().toString(16).substr(2, 8)
+    });
+
+    const statusEl = document.getElementById("status");
+    const outputEl = document.getElementById("output");
+    const colorValue = document.getElementById("colorValue");
     const colorPreview = document.getElementById("colorPreview");
 
+    client.on("connect", () => {
+      statusEl.textContent = "Conectado";
+      client.subscribe(subscribeTopic);
+    });
+
+    client.on("message", (topic, message) => {
+      const timestamp = new Date().toLocaleTimeString();
+      outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${message.toString()}`;
+    });
+
+    client.on("error", (err) => {
+      statusEl.textContent = "Error de conexión";
+      console.error("MQTT Error:", err);
+    });
+
+    const publishColor = (color) => {
+      const payload = { led1: color };
+      client.publish(publishTopic, JSON.stringify(payload));
+    };
+
+    document.getElementById("btnRojo").addEventListener("click", () => publishColor("rojo"));
+    document.getElementById("btnVerde").addEventListener("click", () => publishColor("verde"));
+    document.getElementById("btnAzul").addEventListener("click", () => publishColor("azul"));
+
+    // Paleta de colores
+    const canvas = document.getElementById("colorCanvas");
+    const ctx = canvas.getContext("2d");
     const image = new Image();
-    image.src = "colorwheel-rgb.jpg";
-    image.onload = () => ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.src = "colorwheel-rgb.jpg"; // Debe estar en la misma carpeta en GitHub
+
+    image.onload = () => {
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    };
 
     canvas.addEventListener("click", (e) => {
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = Math.floor(e.clientX - rect.left);
+      const y = Math.floor(e.clientY - rect.top);
       const pixel = ctx.getImageData(x, y, 1, 1).data;
-      const rgb = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
-      rgbValue.textContent = rgb;
-      colorPreview.style.backgroundColor = rgb;
+
+      const r = pixel[0], g = pixel[1], b = pixel[2];
+      const hex = rgbToHex(r, g, b);
+
+      colorValue.textContent = `${hex} (R:${r}, G:${g}, B:${b})`;
+      colorPreview.style.backgroundColor = hex;
+
+      publishColor(hex);
     });
+
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+    }
   </script>
 </body>
 </html>
