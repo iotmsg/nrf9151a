@@ -1,48 +1,46 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Cliente MQTT Web</title>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Selector de color RGB</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; }
+    #canvas { cursor: crosshair; }
+    #colorPreview {
+      margin-top: 10px;
+      width: 50px;
+      height: 50px;
+      border: 2px solid #000;
+      display: inline-block;
+    }
+  </style>
 </head>
 <body>
-  <h2>Estado MQTT: <span id="status">Conectando...</span></h2>
-  <button id="sendBtn">Enviar mensaje</button>
-  <pre id="output"></pre>
+  <h2>Selecciona un color de la rueda</h2>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <div>
+    <p>Color RGB: <span id="rgbValue">---</span></p>
+    <div id="colorPreview"></div>
+  </div>
 
   <script>
-    const subscribeTopic = "topicsub";
-    const publishTopic = "topicpub";
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const rgbValue = document.getElementById("rgbValue");
+    const colorPreview = document.getElementById("colorPreview");
 
-    const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
-      clientId: "web_" + Math.random().toString(16).substr(2, 8)
-    });
+    const image = new Image();
+    image.src = "colorwheel-rgb.jpg";
+    image.onload = () => ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    const statusEl = document.getElementById("status");
-    const outputEl = document.getElementById("output");
-    const sendBtn = document.getElementById("sendBtn");
-
-    client.on("connect", () => {
-      statusEl.textContent = "Conectado";
-      client.subscribe(subscribeTopic);
-    });
-
-    client.on("message", (topic, message) => {
-      const timestamp = new Date().toLocaleTimeString();
-      outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${message.toString()}`;
-    });
-
-    client.on("error", (err) => {
-      statusEl.textContent = "Error de conexión";
-      console.error("MQTT Error:", err);
-    });
-
-    sendBtn.addEventListener("click", () => {
-      const payload = {
-        mensaje: "Hola desde el cliente web",
-        timestamp: new Date().toISOString()
-      };
-      client.publish(publishTopic, JSON.stringify(payload));
+    canvas.addEventListener("click", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      const rgb = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+      rgbValue.textContent = rgb;
+      colorPreview.style.backgroundColor = rgb;
     });
   </script>
 </body>
