@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Cliente MQTT Web</title>
+  <title>Cliente MQTT Web con Brillo</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     canvas { border-radius: 50%; cursor: crosshair; }
@@ -24,9 +24,16 @@
   <button id="btnAzul">Azul</button>
 
   <h3>Selecciona color desde el círculo</h3>
-  <canvas id="colorCanvas" width="300" height="300"></canvas>
-  <span id="colorValue">---</span>
-  <span id="colorPreview"></span>
+  <canvas id="colorCanvas" width="300" height="300"></canvas><br>
+
+  <label for="brightness">Brillo:</label>
+  <input type="range" id="brightness" min="0" max="200" value="100" />
+  <span id="brightnessVal">100%</span>
+
+  <div>
+    <span id="colorValue">---</span>
+    <span id="colorPreview"></span>
+  </div>
 
   <pre id="output"></pre>
 
@@ -42,6 +49,12 @@
     const outputEl = document.getElementById("output");
     const colorValue = document.getElementById("colorValue");
     const colorPreview = document.getElementById("colorPreview");
+    const brightnessSlider = document.getElementById("brightness");
+    const brightnessVal = document.getElementById("brightnessVal");
+
+    brightnessSlider.addEventListener("input", () => {
+      brightnessVal.textContent = brightnessSlider.value + "%";
+    });
 
     client.on("connect", () => {
       statusEl.textContent = "Conectado";
@@ -67,11 +80,10 @@
     document.getElementById("btnVerde").addEventListener("click", () => publishColor("verde"));
     document.getElementById("btnAzul").addEventListener("click", () => publishColor("azul"));
 
-    // Paleta de colores
     const canvas = document.getElementById("colorCanvas");
     const ctx = canvas.getContext("2d");
     const image = new Image();
-    image.src = "colorwheel-rgb.jpg"; // Debe estar en la misma carpeta en GitHub
+    image.src = "colorwheel-rgb.jpg"; // debe estar en la misma carpeta
 
     image.onload = () => {
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
@@ -83,9 +95,15 @@
       const y = Math.floor(e.clientY - rect.top);
       const pixel = ctx.getImageData(x, y, 1, 1).data;
 
-      const r = pixel[0], g = pixel[1], b = pixel[2];
-      const hex = rgbToHex(r, g, b);
+      let r = pixel[0], g = pixel[1], b = pixel[2];
+      const factor = brightnessSlider.value / 100;
 
+      // Aplica el factor de brillo
+      r = Math.min(255, Math.round(r * factor));
+      g = Math.min(255, Math.round(g * factor));
+      b = Math.min(255, Math.round(b * factor));
+
+      const hex = rgbToHex(r, g, b);
       colorValue.textContent = `${hex} (R:${r}, G:${g}, B:${b})`;
       colorPreview.style.backgroundColor = hex;
 
