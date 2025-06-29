@@ -74,9 +74,9 @@
 
     const publishFixedColor = (color) => {
       const map = {
-        "rojo": { led2r: 255, led2g: 0, led2b: 0 },
-        "verde": { led2r: 0, led2g: 255, led2b: 0 },
-        "azul": { led2r: 0, led2g: 0, led2b: 255 }
+        "rojo": { ledr: 255, ledg: 0, ledb: 0 },
+        "verde": { ledr: 0, ledg: 255, ledb: 0 },
+        "azul": { ledr: 0, ledg: 0, ledb: 255 }
       };
       console.log("Enviando MQTT (fijo):", JSON.stringify(map[color]));
       client.publish(publishTopic, JSON.stringify(map[color]));
@@ -84,9 +84,9 @@
 
     const publishColor = (r, g, b) => {
       const payload = {
-        led2r: r,
-        led2g: g,
-        led2b: b
+        ledr: r,
+        ledg: g,
+        ledb: b
       };
       console.log("Enviando MQTT:", JSON.stringify(payload));
       client.publish(publishTopic, JSON.stringify(payload));
