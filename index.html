@@ -50,146 +50,169 @@
 </table>
 
   <!-- IMPORTANTE: el script debe ir al final para que los elementos estén cargados -->
-  <script>
-    const subscribeTopic = "topicpub";
-    const publishTopic = "topicsub";
+<script>
+  const subscribeTopic = "topicpub";
+  const publishTopic = "topicsub";
 
-    const client = mqtt.connect("wss://mqtt.eclipseprojects.io:443/mqtt", {
-      clientId: "web_" + Math.random().toString(16).substr(2, 8)
-    });
+  const client = mqtt.connect("wss://mqtt.eclipseprojects.io:443/mqtt", {
+    clientId: "web_" + Math.random().toString(16).substr(2, 8)
+  });
 
-    const statusEl = document.getElementById("status");
-    const outputEl = document.getElementById("output");
-    const colorValue = document.getElementById("colorValue");
-    const colorPreview = document.getElementById("colorPreview");
-    const brightnessSlider = document.getElementById("brightness");
-    const brightnessVal = document.getElementById("brightnessVal");
+  const statusEl = document.getElementById("status");
+  const outputEl = document.getElementById("output");
+  const colorValue = document.getElementById("colorValue");
+  const colorPreview = document.getElementById("colorPreview");
+  const brightnessSlider = document.getElementById("brightness");
+  const brightnessVal = document.getElementById("brightnessVal");
 
-    brightnessSlider.addEventListener("input", () => {
-      brightnessVal.textContent = brightnessSlider.value + "%";
-    });
+  let lastR = null, lastG = null, lastB = null;
+  let brightnessFactor = brightnessSlider.value / 100;
 
-    client.on("connect", () => {
-      statusEl.textContent = "Conectado";
-      client.subscribe(subscribeTopic);
-    });
+  // Evento del slider de brillo
+  brightnessSlider.addEventListener("input", () => {
+    brightnessVal.textContent = brightnessSlider.value + "%";
+    brightnessFactor = brightnessSlider.value / 100;
 
-client.on("message", (topic, message) => {
-  const timestamp = new Date().toLocaleTimeString();
-  const msgStr = message.toString();
-  outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${msgStr}`;
+    let r, g, b;
 
-  const tableBody = document.querySelector("#dataTable tbody");
-  tableBody.innerHTML = ""; // limpia antes de rellenar
+    if (lastR !== null && lastG !== null && lastB !== null) {
+      // Reenvía último color con nuevo brillo
+      r = Math.min(255, Math.round(lastR * brightnessFactor));
+      g = Math.min(255, Math.round(lastG * brightnessFactor));
+      b = Math.min(255, Math.round(lastB * brightnessFactor));
+    } else {
+      // Si no hay color previo, envía blanco
+      r = g = b = Math.min(255, Math.round(255 * brightnessFactor));
+      lastR = lastG = lastB = 255;
+    }
 
-  try {
-    const data = JSON.parse(msgStr);
+    const hex = rgbToHex(r, g, b);
+    colorValue.textContent = `${hex} (R:${r}, G:${g}, B:${b})`;
+    colorPreview.style.backgroundColor = hex;
 
-    // Si existe campo 'time', convertirlo a formato legible
-    if (data.time) {
-      const date = new Date(data.time);
-      const fechaLegible = date.toLocaleString("es-ES", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
+    publishColor(r, g, b);
+  });
+
+  client.on("connect", () => {
+    statusEl.textContent = "Conectado";
+    client.subscribe(subscribeTopic);
+  });
+
+  client.on("message", (topic, message) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const msgStr = message.toString();
+    outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${msgStr}`;
+
+    const tableBody = document.querySelector("#dataTable tbody");
+    tableBody.innerHTML = "";
+
+    try {
+      const data = JSON.parse(msgStr);
+
+      if (data.time) {
+        const date = new Date(data.time);
+        const fechaLegible = date.toLocaleString("es-ES", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+        data["hora"] = fechaLegible;
+        delete data.time;
+      }
+
+      Object.entries(data).forEach(([key, value]) => {
+        const row = document.createElement("tr");
+        const cellKey = document.createElement("td");
+        const cellVal = document.createElement("td");
+        cellKey.textContent = key;
+        cellVal.textContent = value;
+        row.appendChild(cellKey);
+        row.appendChild(cellVal);
+        tableBody.appendChild(row);
       });
-      data["hora"] = fechaLegible;
-      delete data.time;  // elimina campo original si no lo quieres mostrar
-    }
-
-    Object.entries(data).forEach(([key, value]) => {
+    } catch (e) {
       const row = document.createElement("tr");
-
-      const cellKey = document.createElement("td");
-      cellKey.textContent = key;
-
-      const cellVal = document.createElement("td");
-      cellVal.textContent = value;
-
-      row.appendChild(cellKey);
-      row.appendChild(cellVal);
+      const cell = document.createElement("td");
+      cell.colSpan = 2;
+      cell.textContent = "Mensaje no válido: " + msgStr;
+      row.appendChild(cell);
       tableBody.appendChild(row);
-    });
-  } catch (e) {
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    cell.colSpan = 2;
-    cell.textContent = "Mensaje no válido: " + msgStr;
-    row.appendChild(cell);
-    tableBody.appendChild(row);
-  }
-});
-
-
-    client.on("error", (err) => {
-      statusEl.textContent = "Error de conexión";
-      console.error("MQTT Error:", err);
-    });
-
-const publishFixedColor = (color) => {
-  const map = {
-    "rojo": { ledr: 255, ledg: 0, ledb: 0 },
-    "verde": { ledr: 0, ledg: 255, ledb: 0 },
-    "azul": { ledr: 0, ledg: 0, ledb: 255 }
-  };
-  const payload = {
-    ...map[color],
-    level: parseInt(brightnessSlider.value, 10)
-  };
-  console.log("Enviando MQTT (fijo):", JSON.stringify(payload));
-  client.publish(publishTopic, JSON.stringify(payload));
-};
-
-const publishColor = (r, g, b) => {
-  const payload = {
-    ledr: r,
-    ledg: g,
-    ledb: b,
-    level: parseInt(brightnessSlider.value, 10)
-  };
-  console.log("Enviando MQTT:", JSON.stringify(payload));
-  client.publish(publishTopic, JSON.stringify(payload));
-};
-
-    document.getElementById("btnRojo").addEventListener("click", () => publishFixedColor("rojo"));
-    document.getElementById("btnVerde").addEventListener("click", () => publishFixedColor("verde"));
-    document.getElementById("btnAzul").addEventListener("click", () => publishFixedColor("azul"));
-
-    const canvas = document.getElementById("colorCanvas");
-    const ctx = canvas.getContext("2d");
-    const image = new Image();
-    image.src = "colorwheel-rgb.jpg";
-
-    image.onload = () => {
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    };
-
-    canvas.addEventListener("click", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor(e.clientX - rect.left);
-      const y = Math.floor(e.clientY - rect.top);
-      const pixel = ctx.getImageData(x, y, 1, 1).data;
-
-      let r = pixel[0], g = pixel[1], b = pixel[2];
-      const factor = brightnessSlider.value / 100;
-
-      r = Math.min(255, Math.round(r * factor));
-      g = Math.min(255, Math.round(g * factor));
-      b = Math.min(255, Math.round(b * factor));
-
-      const hex = rgbToHex(r, g, b);
-      colorValue.textContent = `${hex} (R:${r}, G:${g}, B:${b})`;
-      colorPreview.style.backgroundColor = hex;
-
-      publishColor(r, g, b);
-    });
-
-    function rgbToHex(r, g, b) {
-      return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
     }
-  </script>
+  });
+
+  client.on("error", (err) => {
+    statusEl.textContent = "Error de conexión";
+    console.error("MQTT Error:", err);
+  });
+
+  const publishFixedColor = (color) => {
+    const map = {
+      "rojo": { ledr: 255, ledg: 0, ledb: 0 },
+      "verde": { ledr: 0, ledg: 255, ledb: 0 },
+      "azul": { ledr: 0, ledg: 0, ledb: 255 }
+    };
+    const payload = {
+      ...map[color],
+      level: parseInt(brightnessSlider.value, 10)
+    };
+    lastR = map[color].ledr;
+    lastG = map[color].ledg;
+    lastB = map[color].ledb;
+    console.log("Enviando MQTT (fijo):", JSON.stringify(payload));
+    client.publish(publishTopic, JSON.stringify(payload));
+  };
+
+  const publishColor = (r, g, b) => {
+    const payload = {
+      ledr: r,
+      ledg: g,
+      ledb: b,
+      level: parseInt(brightnessSlider.value, 10)
+    };
+    console.log("Enviando MQTT:", JSON.stringify(payload));
+    client.publish(publishTopic, JSON.stringify(payload));
+  };
+
+  document.getElementById("btnRojo").addEventListener("click", () => publishFixedColor("rojo"));
+  document.getElementById("btnVerde").addEventListener("click", () => publishFixedColor("verde"));
+  document.getElementById("btnAzul").addEventListener("click", () => publishFixedColor("azul"));
+
+  const canvas = document.getElementById("colorCanvas");
+  const ctx = canvas.getContext("2d");
+  const image = new Image();
+  image.src = "colorwheel-rgb.jpg";
+
+  image.onload = () => {
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  };
+
+  canvas.addEventListener("click", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor(e.clientX - rect.left);
+    const y = Math.floor(e.clientY - rect.top);
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+
+    lastR = pixel[0];
+    lastG = pixel[1];
+    lastB = pixel[2];
+
+    const r = Math.min(255, Math.round(lastR * brightnessFactor));
+    const g = Math.min(255, Math.round(lastG * brightnessFactor));
+    const b = Math.min(255, Math.round(lastB * brightnessFactor));
+
+    const hex = rgbToHex(r, g, b);
+    colorValue.textContent = `${hex} (R:${r}, G:${g}, B:${b})`;
+    colorPreview.style.backgroundColor = hex;
+
+    publishColor(r, g, b);
+  });
+
+  function rgbToHex(r, g, b) {
+    return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+  }
+</script>
 </body>
 </html>
