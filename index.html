@@ -37,6 +37,17 @@
 
   <pre id="output"></pre>
 
+<h3>Datos recibidos:</h3>
+<table id="dataTable" border="1" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Valor</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
   <!-- IMPORTANTE: el script debe ir al final para que los elementos estén cargados -->
   <script>
     const subscribeTopic = "topicpub";
@@ -62,10 +73,38 @@
       client.subscribe(subscribeTopic);
     });
 
-    client.on("message", (topic, message) => {
-      const timestamp = new Date().toLocaleTimeString();
-      outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${message.toString()}`;
+client.on("message", (topic, message) => {
+  const timestamp = new Date().toLocaleTimeString();
+  const msgStr = message.toString();
+  outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${msgStr}`;
+
+  const tableBody = document.querySelector("#dataTable tbody");
+  tableBody.innerHTML = ""; // limpia antes de rellenar
+
+  try {
+    const data = JSON.parse(msgStr);
+    Object.entries(data).forEach(([key, value]) => {
+      const row = document.createElement("tr");
+
+      const cellKey = document.createElement("td");
+      cellKey.textContent = key;
+
+      const cellVal = document.createElement("td");
+      cellVal.textContent = value;
+
+      row.appendChild(cellKey);
+      row.appendChild(cellVal);
+      tableBody.appendChild(row);
     });
+  } catch (e) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 2;
+    cell.textContent = "Mensaje no válido: " + msgStr;
+    row.appendChild(cell);
+    tableBody.appendChild(row);
+  }
+});
 
     client.on("error", (err) => {
       statusEl.textContent = "Error de conexión";
