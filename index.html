@@ -27,7 +27,7 @@
   <canvas id="colorCanvas" width="300" height="300"></canvas><br>
 
   <label for="brightness">Brillo:</label>
-  <input type="range" id="brightness" min="0" max="200" value="100" />
+  <input type="range" id="brightness" min="0" max="100" value="100" />
   <span id="brightnessVal">100%</span>
 
   <div>
@@ -83,6 +83,22 @@ client.on("message", (topic, message) => {
 
   try {
     const data = JSON.parse(msgStr);
+
+    // Si existe campo 'time', convertirlo a formato legible
+    if (data.time) {
+      const date = new Date(data.time);
+      const fechaLegible = date.toLocaleString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+      data["hora"] = fechaLegible;
+      delete data.time;  // elimina campo original si no lo quieres mostrar
+    }
+
     Object.entries(data).forEach(([key, value]) => {
       const row = document.createElement("tr");
 
@@ -106,30 +122,36 @@ client.on("message", (topic, message) => {
   }
 });
 
+
     client.on("error", (err) => {
       statusEl.textContent = "Error de conexión";
       console.error("MQTT Error:", err);
     });
 
-    const publishFixedColor = (color) => {
-      const map = {
-        "rojo": { ledr: 255, ledg: 0, ledb: 0 },
-        "verde": { ledr: 0, ledg: 255, ledb: 0 },
-        "azul": { ledr: 0, ledg: 0, ledb: 255 }
-      };
-      console.log("Enviando MQTT (fijo):", JSON.stringify(map[color]));
-      client.publish(publishTopic, JSON.stringify(map[color]));
-    };
+const publishFixedColor = (color) => {
+  const map = {
+    "rojo": { ledr: 255, ledg: 0, ledb: 0 },
+    "verde": { ledr: 0, ledg: 255, ledb: 0 },
+    "azul": { ledr: 0, ledg: 0, ledb: 255 }
+  };
+  const payload = {
+    ...map[color],
+    level: parseInt(brightnessSlider.value, 10)
+  };
+  console.log("Enviando MQTT (fijo):", JSON.stringify(payload));
+  client.publish(publishTopic, JSON.stringify(payload));
+};
 
-    const publishColor = (r, g, b) => {
-      const payload = {
-        ledr: r,
-        ledg: g,
-        ledb: b
-      };
-      console.log("Enviando MQTT:", JSON.stringify(payload));
-      client.publish(publishTopic, JSON.stringify(payload));
-    };
+const publishColor = (r, g, b) => {
+  const payload = {
+    ledr: r,
+    ledg: g,
+    ledb: b,
+    level: parseInt(brightnessSlider.value, 10)
+  };
+  console.log("Enviando MQTT:", JSON.stringify(payload));
+  client.publish(publishTopic, JSON.stringify(payload));
+};
 
     document.getElementById("btnRojo").addEventListener("click", () => publishFixedColor("rojo"));
     document.getElementById("btnVerde").addEventListener("click", () => publishFixedColor("verde"));
