@@ -98,50 +98,57 @@
     client.subscribe(subscribeTopic);
   });
 
-  client.on("message", (topic, message) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const msgStr = message.toString();
-    outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${msgStr}`;
+client.on("message", (topic, message) => {
+  const timestamp = new Date().toLocaleTimeString();
+  const msgStr = message.toString();
+  outputEl.textContent = `[${timestamp}] Tópico: ${topic}\n${msgStr}`;
 
-    const tableBody = document.querySelector("#dataTable tbody");
-    tableBody.innerHTML = "";
+  const tableBody = document.querySelector("#dataTable tbody");
+  tableBody.innerHTML = "";
 
-    try {
-      const data = JSON.parse(msgStr);
+  try {
+    const data = JSON.parse(msgStr);
 
-      if (data.time) {
-        const date = new Date(data.time);
-        const fechaLegible = date.toLocaleString("es-ES", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit"
-        });
-        data["hora"] = fechaLegible;
-        delete data.time;
+    // Si hay campo "time" tipo "25/06/30,17:17:51+08"
+    if (data.time) {
+      const timeStr = data.time;
+      const match = timeStr.match(/^(\d{2})\/(\d{2})\/(\d{2}),(\d{2}:\d{2}:\d{2})\+(\d{2})$/);
+
+      if (match) {
+        const year = "20" + match[1];
+        const month = match[2];
+        const day = match[3];
+        const time = match[4];
+        const fecha = `${day}/${month}/${year}`;  // formato DD/MM/YYYY
+        data["fecha"] = fecha;
+        data["hora"] = time;
+      } else {
+        data["fecha"] = "-";
+        data["hora"] = "-";
       }
 
-      Object.entries(data).forEach(([key, value]) => {
-        const row = document.createElement("tr");
-        const cellKey = document.createElement("td");
-        const cellVal = document.createElement("td");
-        cellKey.textContent = key;
-        cellVal.textContent = value;
-        row.appendChild(cellKey);
-        row.appendChild(cellVal);
-        tableBody.appendChild(row);
-      });
-    } catch (e) {
-      const row = document.createElement("tr");
-      const cell = document.createElement("td");
-      cell.colSpan = 2;
-      cell.textContent = "Mensaje no válido: " + msgStr;
-      row.appendChild(cell);
-      tableBody.appendChild(row);
+      delete data.time;
     }
-  });
+
+    Object.entries(data).forEach(([key, value]) => {
+      const row = document.createElement("tr");
+      const cellKey = document.createElement("td");
+      const cellVal = document.createElement("td");
+      cellKey.textContent = key;
+      cellVal.textContent = value;
+      row.appendChild(cellKey);
+      row.appendChild(cellVal);
+      tableBody.appendChild(row);
+    });
+  } catch (e) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 2;
+    cell.textContent = "Mensaje no válido: " + msgStr;
+    row.appendChild(cell);
+    tableBody.appendChild(row);
+  }
+});
 
   client.on("error", (err) => {
     statusEl.textContent = "Error de conexión";
