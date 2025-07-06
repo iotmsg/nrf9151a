@@ -54,7 +54,7 @@
   const subscribeTopic = "topicpub";
   const publishTopic = "topicsub";
 
-  const client = mqtt.connect("wss://mqtt.eclipseprojects.io:443/mqtt", {
+  const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
     clientId: "web_" + Math.random().toString(16).substr(2, 8)
   });
 
