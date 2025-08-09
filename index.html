@@ -54,11 +54,11 @@
 <script>
   const subscribeTopic = "topicpub";
   const publishTopic = "topicsub";
-<!--
+/*
   const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
     clientId: "web_" + Math.random().toString(16).substr(2, 8)
   });
--->
+*/
   const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
    protocol: "wss",
    protocolVersion: 5,
@@ -233,4 +233,5 @@ client.on("message", (topic, message) => {
 </script>
 </body>
 </html>
+
 
