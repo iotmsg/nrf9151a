@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Controlador nRF9151</title>
-  <!-- <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script> -->
-  <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script> -->
   <style>
     canvas { border-radius: 50%; cursor: crosshair; }
     #colorPreview {
@@ -54,12 +54,10 @@
 <script>
   const subscribeTopic = "topicpub";
   const publishTopic = "topicsub";
-/*
   const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
     clientId: "web_" + Math.random().toString(16).substr(2, 8)
   });
-*/
-  const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
+/*  const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
    protocol: "wss",
    protocolVersion: 5,
    clean: true,
@@ -67,7 +65,7 @@
    reconnectPeriod: 2000,
    connectTimeout: 30_000,
    clientId: "web_" + crypto.getRandomValues(new Uint32Array(1))[0].toString(16)
- });
+ }); */
   const statusEl = document.getElementById("status");
   const outputEl = document.getElementById("output");
   const colorValue = document.getElementById("colorValue");
@@ -233,5 +231,6 @@ client.on("message", (topic, message) => {
 </script>
 </body>
 </html>
+
 
 
