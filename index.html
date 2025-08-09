@@ -133,6 +133,8 @@
           }).format(d);
           const fmtTime = new Intl.DateTimeFormat(undefined, {
             timeStyle: 'medium',
+            hourCycle: 'h23',   // Fuerza formato 24h
+            hour12: false       // Alternativa: asegura que no use AM/PM
           }).format(d);
           data["fecha_local"] = fmtDate;
           data["hora_local"]  = fmtTime;
@@ -236,4 +238,5 @@
 </script>
 </body>
 </html>
+
 
