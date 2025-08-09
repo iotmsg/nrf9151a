@@ -65,7 +65,7 @@
   reconnectPeriod: 2000,
   connectTimeout: 30000,
   clientId: "web_" + Math.random().toString(16).slice(2,10)
- }); */
+ });
   const statusEl = document.getElementById("status");
   const outputEl = document.getElementById("output");
   const colorValue = document.getElementById("colorValue");
@@ -231,6 +231,7 @@ client.on("message", (topic, message) => {
 </script>
 </body>
 </html>
+
 
 
 
