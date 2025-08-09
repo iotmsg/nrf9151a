@@ -57,7 +57,7 @@
 /*  const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
     clientId: "web_" + Math.random().toString(16).substr(2, 8)
   });*/
-  const client = mqtt.connect("a35113782c9343f995cf89ab41c31da6.s1.eu.hivemq.cloud:8884/mqtt", {
+  const client = mqtt.connect("wss://a35113782c9343f995cf89ab41c31da6.s1.eu.hivemq.cloud:8884/mqtt", {
   protocolVersion: 5,
   clean: true,
   username: "webaccess1",
@@ -231,6 +231,7 @@ client.on("message", (topic, message) => {
 </script>
 </body>
 </html>
+
 
 
 
