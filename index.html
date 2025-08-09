@@ -74,17 +74,16 @@
   let lastR = null, lastG = null, lastB = null;
   let brightnessFactor = brightnessSlider.value / 100;
 
-  // ----- NUEVO: parser de fecha del módem a Date -----
-  function parseModemTime(str) {
-    // Acepta: "yy/mm/dd,HH:MM:SS+TZ" o "yy/mm/dd,HH:MM:SS-TZ"
+  // Interpreta "yy/mm/dd,HH:MM:SS+TZ" IGNORANDO el +TZ y asumiendo que HH:MM:SS es UTC real.
+  function parseModemTimeIgnoringOffset(str) {
     const m = str.match(/^(\d{2})\/(\d{2})\/(\d{2}),(\d{2}):(\d{2}):(\d{2})([+-])(\d{2})$/);
     if (!m) return null;
-    const [, yy, mm, dd, HH, MM, SS, sign, tzHH] = m;
+    const [, yy, mm, dd, HH, MM, SS] = m;
     const year = 2000 + parseInt(yy, 10);
-    const offset = `${sign}${tzHH}:00`; // "+08:00" o "-03:00"
-    const iso = `${year}-${mm}-${dd}T${HH}:${MM}:${SS}${offset}`;
-    const d = new Date(iso);
-    return isNaN(d.getTime()) ? null : d;
+    // Construimos un Date a partir de UTC puro (ignora offset del string)
+    const utcMs = Date.UTC(year, parseInt(mm,10)-1, parseInt(dd,10),
+                           parseInt(HH,10), parseInt(MM,10), parseInt(SS,10));
+    return new Date(utcMs);
   }
 
   // Evento del slider de brillo
@@ -124,30 +123,24 @@
 
     try {
       const data = JSON.parse(msgStr);
-
-      // ----- NUEVO: convertir data.time a fecha/hora local (Madrid, con DST) -----
       if (data.time) {
-        const d = parseModemTime(data.time);
+        const d = parseModemTimeIgnoringOffset(data.time); // trata HH:MM:SS como UTC
         if (d) {
-          const fmtDate = new Intl.DateTimeFormat('es-ES', {
+          // Usar la zona horaria del SISTEMA del navegador (aplica DST automáticamente)
+          const fmtDate = new Intl.DateTimeFormat(undefined, {
             dateStyle: 'short',
-            timeZone: 'Europe/Madrid'
+            // timeZone: undefined -> usa la del sistema
           }).format(d);
-          const fmtTime = new Intl.DateTimeFormat('es-ES', {
+          const fmtTime = new Intl.DateTimeFormat(undefined, {
             timeStyle: 'medium',
-            timeZone: 'Europe/Madrid'
           }).format(d);
-
-          // añade campos amigables
-          data["fecha_local"] = fmtDate; // p.ej. 09/08/2025
-          data["hora_local"]  = fmtTime; // p.ej. 11:32:10
+          data["fecha_local"] = fmtDate;
+          data["hora_local"]  = fmtTime;
         } else {
           data["fecha_local"] = "-";
           data["hora_local"]  = "-";
         }
-        // (opcional) deja también el original:
-        // data["time_raw"] = data.time;
-        delete data.time; // si prefieres ocultar el crudo
+        delete data.time;
       }
 
       Object.entries(data).forEach(([key, value]) => {
@@ -243,3 +236,4 @@
 </script>
 </body>
 </html>
+
